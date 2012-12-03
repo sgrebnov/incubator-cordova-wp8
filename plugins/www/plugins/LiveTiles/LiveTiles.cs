@@ -75,6 +75,29 @@ namespace Cordova.Extension.Commands
             [DataMember(IsRequired = false, Name = "secondaryTileUri")]
             public string SecondaryTileUri { get; set; }
 
+            /// <summary>
+            /// Small tile image
+            /// </summary>
+            [DataMember(IsRequired = false, Name = "smallImage")]
+            public string SmallImage { get; set; }
+
+            /// <summary>
+            /// Wide tile image
+            /// </summary>
+            [DataMember(IsRequired = false, Name = "wideImage")]
+            public string WideImage { get; set; }
+
+            /// <summary>
+            /// Wide tile back image
+            /// </summary>
+            [DataMember(IsRequired = false, Name = "wideBackImage")]
+            public string WideBackImage { get; set; }
+
+            /// <summary>
+            /// Wide tile content
+            /// </summary>
+            [DataMember(IsRequired = false, Name = "wideContent")]
+            public string WideContent { get; set; }
         }
         #endregion
 
@@ -100,8 +123,8 @@ namespace Cordova.Extension.Commands
 
                 if (appTile != null)
                 {
-                    StandardTileData standardTile = CreateTileData(liveTileOptions);
-                    appTile.Update(standardTile);
+                    FlipTileData flipTile = CreateFlipTileDate(liveTileOptions);
+                    appTile.Update(flipTile);
                     DispatchCommandResult(new PluginResult(PluginResult.Status.OK));
                 }
                 else
@@ -141,13 +164,13 @@ namespace Cordova.Extension.Commands
                 ShellTile foundTile = ShellTile.ActiveTiles.FirstOrDefault(x => x.NavigationUri.ToString().Contains(liveTileOptions.SecondaryTileUri));                
                 if (foundTile == null)
                 {
-                    StandardTileData secondaryTile = CreateTileData(liveTileOptions);
+                    FlipTileData secondaryTile = CreateFlipTileDate(liveTileOptions);
                     PhoneApplicationPage currentPage;
                     Deployment.Current.Dispatcher.BeginInvoke(() =>
                     {
                         currentPage = ((PhoneApplicationFrame)Application.Current.RootVisual).Content as PhoneApplicationPage;
                         string currentUri = currentPage.NavigationService.Source.ToString().Split('?')[0];
-                        ShellTile.Create(new Uri(currentUri + "?Uri=" + liveTileOptions.SecondaryTileUri, UriKind.Relative), secondaryTile);
+                        ShellTile.Create(new Uri(currentUri + "?Uri=" + liveTileOptions.SecondaryTileUri, UriKind.Relative), secondaryTile, true);                        
                         DispatchCommandResult(new PluginResult(PluginResult.Status.OK));
                     });                                                            
                 }
@@ -190,7 +213,7 @@ namespace Cordova.Extension.Commands
 
                 if (foundTile != null)
                 {
-                    StandardTileData liveTile = this.CreateTileData(liveTileOptions);
+                    FlipTileData liveTile = this.CreateFlipTileDate(liveTileOptions);
                     foundTile.Update(liveTile);
                     DispatchCommandResult(new PluginResult(PluginResult.Status.OK));
                 }
@@ -296,7 +319,7 @@ namespace Cordova.Extension.Commands
         /// <summary>
         /// Cerates tile data
         /// </summary>
-        private StandardTileData CreateTileData(LiveTilesOptions liveTileOptions)
+        private StandardTileData CreateStandardTileData(LiveTilesOptions liveTileOptions)
         {
             StandardTileData standardTile = new StandardTileData();
             if (!string.IsNullOrEmpty(liveTileOptions.Title))
@@ -324,6 +347,56 @@ namespace Cordova.Extension.Commands
                 standardTile.BackBackgroundImage = new Uri(liveTileOptions.BackImage, UriKind.RelativeOrAbsolute);
             }
             return standardTile;
+        }
+
+        /// <summary>
+        /// Creates flip tile data
+        /// </summary>
+        private FlipTileData CreateFlipTileDate(LiveTilesOptions liveTileOptions)
+        {
+            FlipTileData flipTile = new FlipTileData();
+            if (!string.IsNullOrEmpty(liveTileOptions.Title))
+            {
+                flipTile.Title = liveTileOptions.Title;
+            }
+            if (!string.IsNullOrEmpty(liveTileOptions.Image))
+            {
+                flipTile.BackgroundImage = new Uri(liveTileOptions.Image, UriKind.RelativeOrAbsolute);
+            }
+            if (liveTileOptions.Count > 0)
+            {
+                flipTile.Count = liveTileOptions.Count;
+            }
+            if (!string.IsNullOrEmpty(liveTileOptions.BackTitle))
+            {
+                flipTile.BackTitle = liveTileOptions.BackTitle;
+            }
+            if (!string.IsNullOrEmpty(liveTileOptions.BackContent))
+            {
+                flipTile.BackContent = liveTileOptions.BackContent;
+            }
+            if (!string.IsNullOrEmpty(liveTileOptions.BackImage))
+            {
+                flipTile.BackBackgroundImage = new Uri(liveTileOptions.BackImage, UriKind.RelativeOrAbsolute);
+            }
+            if (!string.IsNullOrEmpty(liveTileOptions.SmallImage))
+            {
+                flipTile.SmallBackgroundImage = new Uri(liveTileOptions.SmallImage, UriKind.RelativeOrAbsolute);
+            }
+            if (!string.IsNullOrEmpty(liveTileOptions.WideImage))
+            {
+                flipTile.WideBackgroundImage = new Uri(liveTileOptions.WideImage, UriKind.RelativeOrAbsolute);
+            }
+            if (!string.IsNullOrEmpty(liveTileOptions.WideContent))
+            {
+                flipTile.WideBackContent = liveTileOptions.WideContent;
+            }
+            if (!string.IsNullOrEmpty(liveTileOptions.WideBackImage))
+            {
+                flipTile.WideBackBackgroundImage = new Uri(liveTileOptions.WideBackImage, UriKind.RelativeOrAbsolute);
+            }
+
+            return flipTile;            
         }
 
         private CycleTileData CreateCycleTileData(LiveTilesOptions liveTileOptions)

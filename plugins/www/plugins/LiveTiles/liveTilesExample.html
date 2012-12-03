@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
   <head>
     <!-- meta name="viewport" content="width=device-width, height=device-height, user-scalable=yes, initial-scale=2.0, maximum-scale=4.0, minimum-scale=1.0" / -->
@@ -35,7 +35,18 @@
             console.log("Error occurred: " + e);
             document.getElementById('res').innerHTML = "Error occurred: " + e;
         };
-        navigator.plugins.liveTiles.updateAppTile(success,fail,{title:document.getElementById('title').value, image:'Images/appbar.next.rest.png', count: document.getElementById('count').value, backTitle: 'Back title', backContent:'Back side', backImage : 'Images/appbar.close.rest.png'});
+        navigator.plugins.liveTiles.updateAppTile(success, fail, {
+            title: document.getElementById('title').value,
+            image: 'Images/appbar.next.rest.png',
+            count: document.getElementById('count').value,
+            backTitle: 'Back title',
+            backContent: 'Back side',
+            backImage: 'Images/appbar.close.rest.png',
+            smallImage: 'Images/appbar.save.rest.png',
+            wideContent: 'This is wide content',
+            wideImage: 'Images/appbar.stop.rest.png',
+            wideBackImage: 'Images/appbar.feature.video.rest.png'
+        });
     };
 
     function createSecondaryTile() {
@@ -50,7 +61,19 @@
             console.log("Error occurred: " + e);
             document.getElementById('res').innerHTML = "Error occurred: " + e;
         };
-        navigator.plugins.liveTiles.createSecondaryTile(success, fail, { title: document.getElementById('title').value, image: 'Images/appbar.save.rest.png', count: document.getElementById('count').value, secondaryTileUri: secondaryTile,backTitle:'back'});
+        navigator.plugins.liveTiles.createSecondaryTile(success, fail, {
+            title: document.getElementById('title').value,
+            image: 'Images/appbar.next.rest.png',
+            count: document.getElementById('count').value,
+            backTitle: 'Back title',
+            backContent: 'Back side',
+            backImage: 'Images/appbar.close.rest.png',
+            smallImage: 'Images/appbar.save.rest.png',
+            wideContent: 'This is wide content',
+            wideImage: 'Images/appbar.stop.rest.png',
+            wideBackImage: 'Images/appbar.feature.video.rest.png',
+            secondaryTileUri: secondaryTile,            
+        });
     };
 
     function updateSecondaryTile() {
