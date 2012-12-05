@@ -7,9 +7,12 @@
  */
 
 using System;
+using System.Collections.Generic;
+using System.IO.IsolatedStorage;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Windows;
+using System.Windows.Media;
 using Microsoft.Phone.Controls;
 using Microsoft.Phone.Shell;
 using WPCordovaClassLib.Cordova;
@@ -19,14 +22,41 @@ using WPCordovaClassLib.Cordova.JSON;
 namespace Cordova.Extension.Commands
 {
     /// <summary>
-    /// Implementes access to application live tiles
+    /// Implements access to application live tileTypes
     /// http://msdn.microsoft.com/en-us/library/hh202948(v=VS.92).aspx
     /// </summary>
     public class LiveTiles : BaseCommand
-    {
-
-        #region Live tiles options
+    {       
+        #region fields and properties
         
+        /// <summary>
+        /// Name for app settings to store tile types
+        /// </summary>
+        private const string TileSettingsName = "LiveTileList";
+
+        /// <summary>
+        /// Stores type for created tiles
+        /// </summary>
+        private static Dictionary<string, TileType> tileTypes = new Dictionary<string, TileType>();
+
+        #endregion
+
+        #region tile types
+        /// <summary>
+        /// Tile type codes
+        /// </summary>
+        public enum TileType
+        {
+            Flip = 0,
+            Cycle = 1,
+            Iconic = 2
+        }
+
+        #endregion
+
+
+        #region Live tileTypes options
+
         /// <summary>
         /// Represents LiveTile options
         /// </summary>
@@ -98,6 +128,19 @@ namespace Cordova.Extension.Commands
             /// </summary>
             [DataMember(IsRequired = false, Name = "wideContent")]
             public string WideContent { get; set; }
+
+            /// <summary>
+            /// Tile background color
+            /// </summary>
+            [DataMember(IsRequired = false, Name = "backgroundColor")]
+            public string BackgroundColor { get; set; }
+
+            /// <summary>
+            /// Tile type
+            /// </summary>
+            [DataMember(IsRequired = false, Name = "tileType")]
+            public TileType TileType { get; set; }
+
         }
         #endregion
 
@@ -143,46 +186,14 @@ namespace Cordova.Extension.Commands
         /// </summary>
         public void createSecondaryTile(string options)
         {
-            LiveTilesOptions liveTileOptions;
-            try
+            LiveTilesOptions tileOptions;
+
+            if (!this.TryGetTileOptions(options, out tileOptions))
             {
-                liveTileOptions = JsonHelper.Deserialize<LiveTilesOptions>(options);
-            }
-            catch (Exception)
-            {
-                DispatchCommandResult(new PluginResult(PluginResult.Status.JSON_EXCEPTION));
                 return;
             }
 
-            if (string.IsNullOrEmpty(liveTileOptions.Title) || string.IsNullOrEmpty(liveTileOptions.Image) || string.IsNullOrEmpty(liveTileOptions.SecondaryTileUri))
-            {
-                DispatchCommandResult(new PluginResult(PluginResult.Status.JSON_EXCEPTION));
-                return;
-            }
-            try
-            {
-                ShellTile foundTile = ShellTile.ActiveTiles.FirstOrDefault(x => x.NavigationUri.ToString().Contains(liveTileOptions.SecondaryTileUri));                
-                if (foundTile == null)
-                {
-                    FlipTileData secondaryTile = CreateFlipTileDate(liveTileOptions);
-                    PhoneApplicationPage currentPage;
-                    Deployment.Current.Dispatcher.BeginInvoke(() =>
-                    {
-                        currentPage = ((PhoneApplicationFrame)Application.Current.RootVisual).Content as PhoneApplicationPage;
-                        string currentUri = currentPage.NavigationService.Source.ToString().Split('?')[0];
-                        ShellTile.Create(new Uri(currentUri + "?Uri=" + liveTileOptions.SecondaryTileUri, UriKind.Relative), secondaryTile, true);                        
-                        DispatchCommandResult(new PluginResult(PluginResult.Status.OK));
-                    });                                                            
-                }
-                else
-                {
-                    DispatchCommandResult(new PluginResult(PluginResult.Status.ERROR,"Tile already exist"));
-                }                
-            }
-            catch (Exception)
-            {
-                DispatchCommandResult(new PluginResult(PluginResult.Status.ERROR,"Error creating secondary live tile"));
-            }
+            this.CreateTile(tileOptions);
         }
 
         /// <summary>
@@ -213,7 +224,31 @@ namespace Cordova.Extension.Commands
 
                 if (foundTile != null)
                 {
-                    FlipTileData liveTile = this.CreateFlipTileDate(liveTileOptions);
+                    TileType tileType = TileType.Flip;
+                    
+                    if (AppSettings.TryGetSetting(TileSettingsName,out tileTypes))
+                    {
+                        if (tileTypes.ContainsKey(foundTile.NavigationUri.OriginalString))
+                        {
+                            tileType = tileTypes[foundTile.NavigationUri.OriginalString];    
+                        }
+                    }
+                                        
+                    ShellTileData liveTile;
+
+                    switch ((int)tileType)
+                    {                        
+                        case 1:
+                            liveTile = CreateCycleTileData(liveTileOptions);
+                            break;
+                        case 2:
+                            liveTile = CreateIconicTileData(liveTileOptions);
+                            break;
+                        default:
+                            liveTile = CreateFlipTileDate(liveTileOptions);
+                            break;
+                    }                    
+
                     foundTile.Update(liveTile);
                     DispatchCommandResult(new PluginResult(PluginResult.Status.OK));
                 }
@@ -255,6 +290,8 @@ namespace Cordova.Extension.Commands
                 if (foundTile != null)
                 {
                     foundTile.Delete();
+                    tileTypes.Remove(foundTile.NavigationUri.OriginalString);
+                    AppSettings.StoreSetting(TileSettingsName, tileTypes);
                     DispatchCommandResult(new PluginResult(PluginResult.Status.OK));
                 }
                 else
@@ -266,88 +303,144 @@ namespace Cordova.Extension.Commands
             {
                 DispatchCommandResult(new PluginResult(PluginResult.Status.ERROR, "Error deleting secondary live tile"));
             }
+        }     
+
+        
+        
+        /// <summary>
+        /// Creates flip tile.
+        /// </summary>
+        /// <param name="options">tile options.</param>
+        public void createFlipTile(string options)
+        {
+            LiveTilesOptions tileOptions;
+
+            if (!this.TryGetTileOptions(options, out tileOptions))
+            {
+                return;
+            }
+
+            if (string.IsNullOrEmpty(tileOptions.Title) || string.IsNullOrEmpty(tileOptions.Image) || string.IsNullOrEmpty(tileOptions.SecondaryTileUri))
+            {
+                DispatchCommandResult(new PluginResult(PluginResult.Status.JSON_EXCEPTION));
+                return;
+            }
+
+            tileOptions.TileType = TileType.Flip;
+            this.CreateTile(tileOptions);
         }
 
         /// <summary>
-        /// Creates cycle tile
+        /// Creates cycle tile.
         /// </summary>
+        /// <param name="options">tile options.</param>
         public void createCycleTile(string options)
         {
             LiveTilesOptions tileOptions;
-            try
+
+            if (!this.TryGetTileOptions(options, out tileOptions))
             {
-                tileOptions = JsonHelper.Deserialize<LiveTilesOptions>(options);
+                return;
             }
-            catch 
+
+            tileOptions.TileType = TileType.Cycle;
+            this.CreateTile(tileOptions);
+        }
+
+        /// <summary>
+        /// Creates iconic tile.
+        /// </summary>
+        /// <param name="options">tile options</param>
+        public void createIconicTile(string options)
+        {
+            LiveTilesOptions tileOptions;
+
+            if (!this.TryGetTileOptions(options, out tileOptions))
+            {
+                return;
+            }
+
+            tileOptions.TileType = TileType.Iconic;
+            this.CreateTile(tileOptions);
+        }       
+
+        /// <summary>
+        /// Creates tile
+        /// </summary>
+        private void CreateTile(LiveTilesOptions liveTileOptions)
+        {
+            if (string.IsNullOrEmpty(liveTileOptions.SecondaryTileUri))
             {
                 DispatchCommandResult(new PluginResult(PluginResult.Status.JSON_EXCEPTION));
                 return;
             }
 
-            if (string.IsNullOrEmpty(tileOptions.SecondaryTileUri))
-            {
-                DispatchCommandResult(new PluginResult(PluginResult.Status.JSON_EXCEPTION));
-                return;
-            }
-
             try
             {
-                ShellTile foundTile = ShellTile.ActiveTiles.FirstOrDefault(x => x.NavigationUri.ToString().Contains(tileOptions.SecondaryTileUri));
+                ShellTile foundTile = ShellTile.ActiveTiles.FirstOrDefault(x => x.NavigationUri.ToString().Contains(liveTileOptions.SecondaryTileUri));
                 if (foundTile != null)
                 {
                     DispatchCommandResult(new PluginResult(PluginResult.Status.ERROR, "Tile already exist"));
                 }
                 else
                 {
-                    CycleTileData cycleTile = CreateCycleTileData(tileOptions);
                     Deployment.Current.Dispatcher.BeginInvoke(() =>
                     {
+                        ShellTileData liveTile;
+
+                        switch ((int)liveTileOptions.TileType)
+                        {
+                            case 1:
+                                liveTile = CreateCycleTileData(liveTileOptions);
+                                break;
+                            case 2:
+                                liveTile = CreateIconicTileData(liveTileOptions);
+                                break;
+                            default:
+                                liveTile = CreateFlipTileDate(liveTileOptions);
+                                break;
+                        }
+
                         PhoneApplicationPage currentPage = ((PhoneApplicationFrame)Application.Current.RootVisual).Content as PhoneApplicationPage;
                         string currentUri = currentPage.NavigationService.Source.ToString().Split('?')[0];
-                        ShellTile.Create(new Uri(currentUri + "?Uri=" + tileOptions.SecondaryTileUri, UriKind.Relative), cycleTile, true);
+                        ShellTile.Create(new Uri(currentUri + "?Uri=" + liveTileOptions.SecondaryTileUri, UriKind.Relative), liveTile, true);
+                        tileTypes.Add(currentUri + "?Uri=" + liveTileOptions.SecondaryTileUri, liveTileOptions.TileType);
+                        AppSettings.StoreSetting(TileSettingsName, tileTypes);
                         DispatchCommandResult(new PluginResult(PluginResult.Status.OK));
-                    });   
+                    });
                 }
             }
             catch
             {
-                DispatchCommandResult(new PluginResult(PluginResult.Status.ERROR, "Error creating cycle tile"));
+                DispatchCommandResult(new PluginResult(PluginResult.Status.ERROR, "Error creating iconic tile"));
             }
         }
-
 
         /// <summary>
-        /// Cerates tile data
+        /// Tries to parse options string
         /// </summary>
-        private StandardTileData CreateStandardTileData(LiveTilesOptions liveTileOptions)
+        /// <param name="options"></param>
+        /// <param name="tileOptions"></param>
+        /// <returns></returns>
+        private bool TryGetTileOptions(string options, out LiveTilesOptions tileOptions)
         {
-            StandardTileData standardTile = new StandardTileData();
-            if (!string.IsNullOrEmpty(liveTileOptions.Title))
+            bool result = false;
+
+            try
             {
-                standardTile.Title = liveTileOptions.Title;
+                tileOptions = JsonHelper.Deserialize<LiveTilesOptions>(options);
+                result = true;
             }
-            if (!string.IsNullOrEmpty(liveTileOptions.Image))
+            catch
             {
-                standardTile.BackgroundImage = new Uri(liveTileOptions.Image, UriKind.RelativeOrAbsolute);
-            }                        
-            if (liveTileOptions.Count > 0)
-            {
-                standardTile.Count = liveTileOptions.Count;
+                tileOptions = null;
+                DispatchCommandResult(new PluginResult(PluginResult.Status.JSON_EXCEPTION));
             }
-            if (!string.IsNullOrEmpty(liveTileOptions.BackTitle))
-            {
-                standardTile.BackTitle = liveTileOptions.BackTitle;
-            }
-            if (!string.IsNullOrEmpty(liveTileOptions.BackContent))
-            {
-                standardTile.BackContent = liveTileOptions.BackContent;
-            }
-            if (!string.IsNullOrEmpty(liveTileOptions.BackImage))
-            {
-                standardTile.BackBackgroundImage = new Uri(liveTileOptions.BackImage, UriKind.RelativeOrAbsolute);
-            }
-            return standardTile;
+
+            return result;
         }
+
+        #region creating tile data
 
         /// <summary>
         /// Creates flip tile data
@@ -424,5 +517,134 @@ namespace Cordova.Extension.Commands
             return tileData;
         }
 
+        /// <summary>
+        /// Creates iconic tile data.
+        /// </summary>        
+        private IconicTileData CreateIconicTileData(LiveTilesOptions liveTileOptions)
+        {
+            IconicTileData tileData = new IconicTileData();
+            if (!string.IsNullOrEmpty(liveTileOptions.Title))
+            {
+                tileData.Title = liveTileOptions.Title;
+            }
+            if (liveTileOptions.Count > 0)
+            {
+                tileData.Count = liveTileOptions.Count;
+            }
+            if (!string.IsNullOrEmpty(liveTileOptions.Image))
+            {
+                tileData.IconImage = new Uri(liveTileOptions.Image, UriKind.RelativeOrAbsolute);
+            }
+            if (!string.IsNullOrEmpty(liveTileOptions.SmallImage))
+            {
+                tileData.SmallIconImage = new Uri(liveTileOptions.SmallImage, UriKind.RelativeOrAbsolute);
+            }
+            if (!string.IsNullOrEmpty(liveTileOptions.BackgroundColor))
+            {
+                tileData.BackgroundColor = LiveTiles.GetColorFromHexString(liveTileOptions.BackgroundColor);
+            }            
+            if (!string.IsNullOrEmpty(liveTileOptions.WideContent))
+            {
+                string[] content = liveTileOptions.WideContent.Split('|');
+                int length = content.Length;
+                if (length >= 1)
+                {
+                    tileData.WideContent1 = content[0];
+                }
+                if (length >= 2)
+                {
+                    tileData.WideContent2 = content[1];
+                }
+                if (length >= 3)
+                {
+                    tileData.WideContent3 = content[2];
+                }                               
+            }
+            return tileData;
+        }
+
+        #endregion
+
+        #region util methods
+
+        /// <summary>
+        /// Converts string in hex color format to Color object. 
+        /// </summary>
+        /// <param name="hexColor">the string in hex color format.</param>
+        /// <returns>Color object.</returns>
+        private static Color GetColorFromHexString(string hexColor)
+        {
+            const int fromBase = 16;
+            hexColor = hexColor.Trim().TrimStart('#');
+
+            if (hexColor.Length != 8 && hexColor.Length != 6)
+            {
+                throw new ArgumentException("string is not in a valid hex color");
+            }
+
+            int parseIndex = 0;
+            bool hasAlphaChannel = hexColor.Length == 8;
+            byte alpha = 255;
+
+            if (hasAlphaChannel)
+            {
+                alpha = Convert.ToByte(hexColor.Substring(0, 2), fromBase);
+                parseIndex += 2;
+            }
+
+            byte red = Convert.ToByte(hexColor.Substring(parseIndex, 2), fromBase);
+            parseIndex += 2;
+            byte green = Convert.ToByte(hexColor.Substring(parseIndex, 2), fromBase);
+            parseIndex += 2;
+            byte blue = Convert.ToByte(hexColor.Substring(parseIndex, 2), fromBase);
+
+            return Color.FromArgb(alpha, red, green, blue);
+        }
+
+        /// <summary>
+        /// Provides access to the app settings
+        /// </summary>
+        public static class AppSettings
+        {
+            private static IsolatedStorageSettings Settings = IsolatedStorageSettings.ApplicationSettings;
+
+            public static void StoreSetting(string settingName, string value)
+            {
+                StoreSetting<string>(settingName, value);
+            }
+
+            public static void StoreSetting<TValue>(string settingName, TValue value)
+            {
+                if (!Settings.Contains(settingName))
+                {
+                    Settings.Add(settingName, value);
+                }
+                else
+                {
+                    Settings[settingName] = value;
+                }                    
+
+                Settings.Save();
+            }
+
+            public static bool TryGetSetting<TValue>(string settingName, out TValue value)
+            {
+                bool result = false;
+                value = default(TValue);
+                try
+                {
+                    if (Settings.Contains(settingName))
+                    {
+                        value = (TValue)Settings[settingName];
+                        result = true;
+                    }
+                }
+                catch (Exception e)
+                {
+                }
+                return result;
+            }
+        }
+        #endregion
     }
 }

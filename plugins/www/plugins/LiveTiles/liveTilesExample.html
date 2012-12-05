@@ -49,33 +49,6 @@
         });
     };
 
-    function createSecondaryTile() {
-        console.log('Create secondary tile');
-
-        var success = function (res) {
-            console.log('secondary tile was created');
-            document.getElementById('res').innerHTML = res;
-        };
-
-        var fail = function (e) {
-            console.log("Error occurred: " + e);
-            document.getElementById('res').innerHTML = "Error occurred: " + e;
-        };
-        navigator.plugins.liveTiles.createSecondaryTile(success, fail, {
-            title: document.getElementById('title').value,
-            image: 'Images/appbar.next.rest.png',
-            count: document.getElementById('count').value,
-            backTitle: 'Back title',
-            backContent: 'Back side',
-            backImage: 'Images/appbar.close.rest.png',
-            smallImage: 'Images/appbar.save.rest.png',
-            wideContent: 'This is wide content',
-            wideImage: 'Images/appbar.stop.rest.png',
-            wideBackImage: 'Images/appbar.feature.video.rest.png',
-            secondaryTileUri: secondaryTile,            
-        });
-    };
-
     function updateSecondaryTile() {
         console.log('Update secondary tile');
 
@@ -106,21 +79,62 @@
 
         navigator.plugins.liveTiles.deleteSecondaryTile(success, fail, { secondaryTileUri: secondaryTile });
     };
-    
-    function createCycleTile() {
-          console.log('Create cycle tile');
-          
-          var success = function (res) {
-            console.log('cycle tile created');
+
+    function createSecondaryTile(tileType) {
+        var liveTile = navigator.plugins.liveTiles,
+            title = document.getElementById('title').value,
+            count = document.getElementById('count').value,
+            options;
+        
+        if (tileType == liveTile.tileType.ICONIC) {
+            console.log('Create iconic tile');            
+            options = {
+                title: title,
+                count: count,
+                secondaryTileUri: secondaryTile,
+                backgroundColor: '#00ff00',
+                wideContent: 'content1|content2|content3',
+                tileType: tileType
+            };
+        } else if (tileType == liveTile.tileType.CYCLE) {
+            console.log('Create cycle tile');
+            options = {
+                title: title,
+                count: count,
+                secondaryTileUri: secondaryTile, backTitle: 'back',
+                image: 'ApplicationIcon.png|Images/appbar.stop.rest.png',
+                tileType: tileType
+            };
+        } else {
+            console.log('Create flip tile');
+            options = {
+                title: title,                
+                count: count,
+                image: 'Images/appbar.next.rest.png',
+                backTitle: 'Back title',
+                backContent: 'Back side',
+                backImage: 'Images/appbar.close.rest.png',
+                smallImage: 'Images/appbar.save.rest.png',
+                wideContent: 'This is wide content',
+                wideImage: 'Images/appbar.stop.rest.png',
+                wideBackImage: 'Images/appbar.feature.video.rest.png',
+                secondaryTileUri: secondaryTile,
+                tileType: tileType
+            };
+        }
+                
+        var success = function (res) {
+            console.log('secondary tile was created');
             document.getElementById('res').innerHTML = res;
-          };
-          var fail = function (e) {
+        };
+
+        var fail = function (e) {
             console.log("Error occurred: " + e);
             document.getElementById('res').innerHTML = "Error occurred: " + e;
-          };
-          /* splits images name by '|' character. First specified image will used as small icon */
-          navigator.plugins.liveTiles.createCycleTile(success, fail, {title: document.getElementById('title').value, count:document.getElementById('count').value, secondaryTileUri: secondaryTile, backTitle: 'back', image:'ApplicationIcon.png|Background.png' });
-    };
+        };
+        
+        liveTile.createSecondaryTile(success, fail, options);
+    }
 
 </script>
 
@@ -137,11 +151,12 @@
         <br/>
         <b>Result:</b> <span id="res"></span>
     </div>
-    <h2>Action</h2>
-    <input type="button" onclick="updateAppTile();" value="Update application tile"/>
-    <input type="button" onclick="createSecondaryTile();" value="Create secondary tile" />
-    <input type="button" onclick="updateSecondaryTile();" value="Update secondary tile" />
-    <input type="button" onclick="createCycleTile();" value="Create cycle tile" />
-    <input type="button" onclick="deleteSecondaryTile();" value="Delete secondary tile" />
+    <h2>Action</h2>    
+      <input type="button" onclick="createSecondaryTile(0);" value="add flip tile" />    
+      <input type="button" onclick="createSecondaryTile(1);" value="add cycle tile" />
+      <input type="button" onclick="createSecondaryTile(2);" value="add iconic tile" />      
+      <input type="button" onclick="updateSecondaryTile();" value="Update secondary tile" />
+      <input type="button" onclick="deleteSecondaryTile();" value="Delete secondary tile" />
+      <input type="button" onclick="updateAppTile();" value="Update application tile"/>
   </body>
 </html>      

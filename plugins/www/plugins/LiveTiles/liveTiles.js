@@ -37,11 +37,18 @@
                     cdv.exec(successCallback, errorCallback, "LiveTiles", "deleteSecondaryTile", options);
                 }
             },
-
+            
+            // deprecated method. Use createSecondaryTile with {tileType: navigator.plugins.liveTiles.tileType.CYCLE}
             createCycleTile: function (successCallback, errorCallback, options) {
                 if(checkArgs(successCallback, errorCallback)) {
                     cdv.exec(successCallback, errorCallback, "LiveTiles", "createCycleTile", options);
                 }
+            },
+            
+            tileType: {
+                FLIP: 0,
+                CYCLE: 1,
+                ICONIC: 2
             }
 
         };
