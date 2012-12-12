@@ -122,7 +122,7 @@ Input fields
 
 */
 
-input[type="text"]
+input[type="text"], select
 {
     width: 90%;
     padding:4px;
@@ -146,6 +146,11 @@ span.tb-label
     font-size: 12pt;
     color: grey; 
     display: block;
+}
+
+select {
+    margin: 0px 6px;
+    width: 95%;
 }
 
 /** 

@@ -1,0 +1,111 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <title>Bluetooth plugin</title>      
+    <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no;" />
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8"/> <!-- ISO-8859-1 -->
+    <link rel="stylesheet" href="../../master.css" type="text/css" media="screen"/>
+    <script type="text/javascript" charset="utf-8" src="../../cordova-2.2.0.js"></script>  
+    <script type="text/javascript" charset="utf-8" src="bluetooth.js"></script>
+    <script type="text/javascript" charset="utf-8">
+        var bluetooth;
+
+        window.addEventListener('load', function () {
+            document.addEventListener('deviceready', function () {
+                bluetooth = cordova.require( 'cordova/plugin/bluetooth' );
+            }, false);
+        }, false);
+
+        function isEnabled() {
+          bluetooth.isEnabled( function(result) {
+              displayResult('Bluetooth enabled: ' + result);
+          }, errorHandler);
+        }
+
+        function enableBT() {
+            bluetooth.enable( function() {
+                displayResult('Bluetooth has been enabled');
+            }, errorHandler);
+        }
+
+        function disableBT() {
+            bluetooth.disable( function() {
+                displayResult( 'Bluetooth has been disabled' );
+            }, errorHandler);
+        }
+
+        function discoverDevices() {
+            bluetooth.discoverDevices( function(devices) {
+                displayResult('discovering successfully completed');
+                var deviceList = document.getElementById('deviceList');
+                for( var i = 0; i < devices.length; i++ ) {
+                    var option = document.createElement('option');
+                    option.value = devices[i].name;
+                    option.text = devices[i].name;
+                    deviceList.add(option);
+                }
+            }, errorHandler);
+        }
+
+        function connect() {
+            var devices = document.getElementById("deviceList");
+            var deviceName = devices.options[devices.selectedIndex].value;
+            bluetooth.connect( function() {
+                        displayResult('Connected successfully');
+                    },errorHandler, {address: deviceName, type: bluetooth.connectionType.PHONE_TO_PHONE});
+        }
+
+        function startAdvertising(){
+            bluetooth.startAdvertising(function(){
+                displayResult('advertising started');
+            }, errorHandler);
+        }
+
+        function disconnect(){
+          bluetooth.disconnect(function(){
+              displayResult('connection has been closed');
+          }, errorHandler, {continueAdvertise: false});
+        }
+
+        function read(){
+          bluetooth.read(function(result){
+              displayResult(result);
+          }, errorHandler);
+        }
+
+        function sendMessage(){
+          var message = document.getElementById("textbox").value;
+          bluetooth.send(function(){
+              displayResult('message has been sent');
+          }, errorHandler, {message: message});
+        }
+
+        function errorHandler(error){
+            displayResult('Error: ' + (error) ? error : "Unknown error");
+        }
+
+        function displayResult(result){
+          var display = document.getElementById('result');
+          display.innerHTML = 'Result: ' + result;
+        }
+
+    </script>
+  </head>
+
+  <body>
+       <div id="result"></div>
+       <button onclick="isEnabled();">isEnabled</button>
+       <button onclick="enableBT();">enable</button>
+       <button onclick="disableBT();">disable</button>
+       <button onclick="startAdvertising();">start advertising</button>
+       <button onclick="discoverDevices();">discover devices</button>
+       <select id="deviceList">
+       </select>
+       <button id='bt-connect' onclick="connect();">connect</button>
+       <input type="text" id="textbox" value="some message" style="margin: 0 6px; width: 92%;" />
+       <button onclick="sendMessage();">send message</button>
+       <button onclick="read();">read incoming message</button>
+       <button onclick="disconnect();">disconnect</button>
+       </p>
+  </body>
+</html>

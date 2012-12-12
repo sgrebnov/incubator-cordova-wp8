@@ -129,6 +129,7 @@
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="www\plugins\Bluetooth\BluetoothManager.cs" />
     <Compile Include="www\plugins\ChildBrowser\ChildBrowserCommand.cs" />
     <Compile Include="www\plugins\Globalization\Globalization.cs" />
     <Compile Include="www\plugins\LiveTiles\LiveTiles.cs" />
@@ -156,6 +157,8 @@
     <Content Include="www\cordova-2.2.0.js" />
     <Content Include="www\index.html" />
     <Content Include="www\master.css" />
+    <Content Include="www\plugins\Bluetooth\bluetooth.js" />
+    <Content Include="www\plugins\Bluetooth\bluetooth.html" />
     <Content Include="www\plugins\ChildBrowser\browser.html" />
     <Content Include="www\plugins\ChildBrowser\ChildBrowser.js" />
     <Content Include="www\plugins\Facebook\facebook.html" />
